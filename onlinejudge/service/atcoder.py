@@ -486,7 +486,8 @@ class AtCoderProblemData(ProblemData):
             session: Optional[requests.Session],
             time_limit_msec: int,
             timestamp: Optional[datetime.datetime],
-            html: Optional[bytes] = None  # TODO: in Python 3.5, you cannnot use both "*" and trailing ","
+            html: Optional[bytes] = None,
+            content_md: Optional[str] = None
     ):
         # yapf: enable
         self.alphabet = alphabet
@@ -497,11 +498,8 @@ class AtCoderProblemData(ProblemData):
         self._session = session
         self.time_limit_msec = time_limit_msec
         self._timestamp = timestamp
-        if html is None:
-            assert response is not None
-            self._html = response.content
-        else:
-            self._html = html
+        self._html = html if html is not None else response.content
+        self.content_md = content_md
 
     @property
     def problem(self) -> 'AtCoderProblem':
@@ -563,9 +561,64 @@ class AtCoderProblemData(ProblemData):
         )
 
     @classmethod
+    def parse_to_markdown(cls, html_content):
+        soup = bs4.BeautifulSoup(html_content, 'html.parser')
+    
+        # 找到英文内容部分
+        en_content = soup.find('span', class_='lang-en')
+        if not en_content:
+            return "未找到英文内容"
+        
+        markdown = []
+        
+        # 遍历所有section
+        for section in en_content.find_all('section'):
+            # 遍历section的所有直接子元素
+            for child in section.children:
+                if not child.name:  # 跳过空文本节点
+                    continue
+                    
+                if child.name == 'h3':
+                    markdown.append(f"### {child.text}\n")
+                    
+                elif child.name == 'p':
+                    img = child.find('img')
+                    if img:
+                        alt_text = img.get('alt', 'Image')
+                        src = img.get('src', '')
+                        markdown.append(f"![{alt_text}]({src})\n")
+                    else:
+                        text = str(child)
+                        text = re.sub(r'<var>([^<]+)</var>', r'$\1$', text)
+                        text = bs4.BeautifulSoup(text, 'html.parser').get_text()
+                        markdown.append(f"{text}\n")
+                    
+                elif child.name == 'ul':
+                    # markdown.append("")
+                    for li in child.find_all('li'):
+                        text = str(li)
+                        text = re.sub(r'<var>([^<]+)</var>', r'$\1$', text)
+                        text = bs4.BeautifulSoup(text, 'html.parser').get_text().strip()
+                        markdown.append(f"- {text}")
+                    markdown.append("")
+                    
+                elif child.name == 'pre':
+                    text = str(child)
+                    text = re.sub(r'<var>([^<]+)</var>', r'$\1$', text)
+                    text = bs4.BeautifulSoup(text, 'html.parser').get_text().strip()
+                    markdown.append("```")
+                    markdown.append(text)
+                    markdown.append("```\n")
+
+
+        return "\n".join(markdown)
+
+    @classmethod
     def _from_html(cls, html: bytes, *, problem: 'AtCoderProblem', session: Optional[requests.Session] = None, response: Optional[requests.Response] = None, timestamp: Optional[datetime.datetime] = None) -> 'AtCoderProblemData':
         soup = bs4.BeautifulSoup(html, utils.HTML_PARSER)
         h2 = soup.find('span', class_='h2')
+
+        content_md = cls.parse_to_markdown(html)
 
         alphabet, _, name = utils.get_direct_children_text(h2).strip().partition(' - ')
 
@@ -601,6 +654,7 @@ class AtCoderProblemData(ProblemData):
             memory_limit_byte=memory_limit_byte,
             name=name,
             problem=problem,
+            content_md=content_md,
             response=response,
             session=session,
             time_limit_msec=time_limit_msec,
@@ -743,7 +797,15 @@ class AtCoderProblemDetailedData(AtCoderProblemData):
     @classmethod
     def _parse_score(cls, soup: bs4.BeautifulSoup) -> Optional[int]:
         task_statement = soup.find('div', id='task-statement')
-        p = task_statement.find('p')  # first
+        # 找到所有的<p>标签
+        p_tags = task_statement.find_all('p')
+
+        # 遍历所有的<p>标签，寻找包含"配点"的标签
+        p = None
+        for tag in p_tags:
+            if '配点' in tag.text:
+                p = tag
+                break
         if p is not None and p.text.startswith('配点 : '):
             score = utils.remove_suffix(utils.remove_prefix(p.text, '配点 : '), ' 点')
             try:
@@ -781,6 +843,7 @@ class AtCoderProblemDetailedData(AtCoderProblemData):
             memory_limit_byte=data.memory_limit_byte,
             name=data.name,
             problem=data.problem,
+            content_md=data.content_md,
             response=data.response,
             sample_cases=sample_cases,
             score=score,

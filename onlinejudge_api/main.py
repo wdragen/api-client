@@ -97,6 +97,7 @@ def get_parser() -> argparse.ArgumentParser:
     subparser.add_argument('--system', action='store_true', help='download system testcases')
     group = subparser.add_mutually_exclusive_group()
     group.add_argument('--full', action='store_true')
+    group.add_argument('--md', action='store_true')
     group.add_argument('--compatibility', action='store_true', help='add and fix some fields for compatibility to competitive-companion')
 
     # get-contest
@@ -276,7 +277,7 @@ def main(args: Optional[List[str]] = None, *, debug: bool = False) -> Dict[str, 
             if parsed.subcommand == 'get-problem':
                 if problem is None:
                     raise ValueError("unsupported URL: {}".format(repr(parsed.url)))
-                result = get_problem.main(problem, is_system=parsed.system, is_full=parsed.full, is_compatibility=parsed.compatibility, session=session)
+                result = get_problem.main(problem, is_system=parsed.system, is_full=parsed.full, is_md=parsed.md, is_compatibility=parsed.compatibility, session=session)
                 if parsed.compatibility:
                     schema = get_problem.schema_compatibility
                 else:

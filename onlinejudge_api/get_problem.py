@@ -278,7 +278,7 @@ def translate_to_competitive_companion_format(data: Dict[str, Any]) -> Dict[str,
     }
 
 
-def main(problem: Problem, *, is_system: bool, is_compatibility: bool, is_full: bool, session: requests.Session) -> Dict[str, Any]:
+def main(problem: Problem, *, is_system: bool, is_compatibility: bool, is_full: bool, is_md: bool, session: requests.Session) -> Dict[str, Any]:
     """
     :raises Exception:
     """
@@ -318,6 +318,9 @@ def main(problem: Problem, *, is_system: bool, is_compatibility: bool, is_full: 
         }
         result["memoryLimit"] = data.memory_limit_byte // 1000 // 1000
         result["timeLimit"] = data.time_limit_msec
+        result["score"] = data.score
+        if is_md:
+            result["content_md"] = data.content_md
         if is_full:
             result["raw"] = {
                 "html": data.html.decode(),
