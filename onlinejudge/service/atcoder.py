@@ -590,6 +590,7 @@ class AtCoderProblemData(ProblemData):
                     else:
                         text = str(child)
                         text = re.sub(r'<var>([^<]+)</var>', r'$\1$', text)
+                        text = re.sub(r'<code>([^<]+)</code>', r'`\1`', text)
                         text = bs4.BeautifulSoup(text, 'html.parser').get_text()
                         markdown.append(f"{text}\n")
                     
@@ -604,6 +605,7 @@ class AtCoderProblemData(ProblemData):
 
                             text = str(li)
                             text = re.sub(r'<var>([^<]+)</var>', r'$\1$', text)
+                            text = re.sub(r'<code>([^<]+)</code>', r'`\1`', text)
                             text = bs4.BeautifulSoup(text, 'html.parser').get_text().strip()
                             items.append(f"- {text}")
 
