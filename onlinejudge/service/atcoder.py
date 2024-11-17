@@ -594,12 +594,25 @@ class AtCoderProblemData(ProblemData):
                         markdown.append(f"{text}\n")
                     
                 elif child.name == 'ul':
-                    # markdown.append("")
-                    for li in child.find_all('li'):
-                        text = str(li)
-                        text = re.sub(r'<var>([^<]+)</var>', r'$\1$', text)
-                        text = bs4.BeautifulSoup(text, 'html.parser').get_text().strip()
-                        markdown.append(f"- {text}")
+                    def process_list_items(ul):
+                        items = []
+                        for li in ul.find_all('li', recursive=False):
+                            # 递归处理嵌套的 <ul>
+                            nested_ul = li.find('ul')
+                             # 保存嵌套的 <ul> 内容
+                            nested_ul_content = nested_ul.extract() if nested_ul else None
+
+                            text = str(li)
+                            text = re.sub(r'<var>([^<]+)</var>', r'$\1$', text)
+                            text = bs4.BeautifulSoup(text, 'html.parser').get_text().strip()
+                            items.append(f"- {text}")
+
+                            if nested_ul_content:
+                                nested_items = process_list_items(nested_ul_content)
+                                items.extend(['  ' + item for item in nested_items])
+                        return items
+
+                    markdown.extend(process_list_items(child))
                     markdown.append("")
                     
                 elif child.name == 'pre':
