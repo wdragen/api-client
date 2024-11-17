@@ -592,6 +592,7 @@ class AtCoderProblemData(ProblemData):
                         text = re.sub(r'<var>([^<]+)</var>', r'$\1$', text)
                         text = re.sub(r'<code>([^<]+)</code>', r'`\1`', text)
                         text = bs4.BeautifulSoup(text, 'html.parser').get_text()
+                        text = text.replace('\r', '  ')
                         markdown.append(f"{text}\n")
                     
                 elif child.name == 'ul':
@@ -621,6 +622,7 @@ class AtCoderProblemData(ProblemData):
                     text = str(child)
                     text = re.sub(r'<var>([^<]+)</var>', r'$\1$', text)
                     text = bs4.BeautifulSoup(text, 'html.parser').get_text().strip()
+                    text = text.replace('\r', '  ')
                     markdown.append("```")
                     markdown.append(text)
                     markdown.append("```\n")
